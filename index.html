@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Trimmer Shop</title>
+    <style>
+        /* Ваші стилі з файлу... (я їх зберігаю) */
+        .cart-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; color: #fff; }
+        .cart-form { background: #fff; color: #000; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
+        .cart-form input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
+        .cart-counter-fixed { position: fixed; top: 20px; right: 20px; background: #ff4500; color: #fff; padding: 10px 20px; border-radius: 50px; z-index: 1000; cursor: pointer; font-weight: bold; }
+        /* Виправлення помилок CSS */
+        .spec-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body>
+
+<div class="cart-counter-fixed" onclick="toggleCart()">🛒 Кошик: <span id="c-count">0</span></div>
+
+<div class="cart-overlay" id="cart-modal">
+    <div class="cart-form">
+        <h2 style="margin-top:0">Оформлення</h2>
+        <div id="items-list" style="margin-bottom:10px; font-size:14px"></div>
+        <form id="order-tg">
+            <input type="text" name="name" placeholder="Ваше ім'я" required>
+            <input type="tel" name="phone" placeholder="Телефон" required>
+            <input type="text" name="address" placeholder="Місто та № пошти" required>
+            <button type="submit" style="background:#ff4500; color:#fff; border:none; width:100%; padding:15px; border-radius:5px; cursor:pointer; font-weight:bold">ЗАМОВИТИ</button>
+            <button type="button" onclick="toggleCart()" style="background:none; border:none; width:100%; margin-top:10px; cursor:pointer">Закрити</button>
+        </form>
+    </div>
+</div>
+
+<script>
+const TOKEN = '8750230516:AAG52DRZZdu3UzuvF8RXMMxKBE8pF4i8XsE';
+const ID = '8750230516';
+let basket = [];
+
+// Функція для кнопок "Купити"
+document.querySelectorAll('.buy-btn, .order-btn, .main-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const card = btn.closest('section, .product-card');
+        const name = card.querySelector('h1, h2, h3')?.innerText || "Тример";
+        const price = card.querySelector('.price-new, .current-price')?.innerText || "";
+        
+        basket.push({name, price});
+        document.getElementById('c-count').innerText = basket.length;
+        alert('Товар додано в кошик!');
+    });
+});
+
+function toggleCart() {
+    const modal = document.getElementById('cart-modal');
+    if (basket.length === 0) return alert("Кошик порожній");
+    document.getElementById('items-list').innerHTML = basket.map(i => `• ${i.name} (${i.price})`).join('<br>');
+    modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+}
+
+document.getElementById('order-tg').onsubmit = async function(e) {
+    e.preventDefault();
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.innerText = "Відправка...";
+    submitBtn.disabled = true;
+
+    let msg = `<b>📦 НОВЕ ЗАМОВЛЕННЯ</b>\n\n`;
+    msg += `👤 Ім'я: ${this.name.value}\n`;
+    msg += `📞 Тел: ${this.phone.value}\n`;
+    msg += `📍 Доставка: ${this.address.value}\n\n`;
+    msg += `<b>Товари:</b>\n`;
+    basket.forEach((item, index) => msg += `${index+1}. ${item.name} ${item.price}\n`);
+
+    try {
+        const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({chat_id: ID, parse_mode: 'html', text: msg})
+        });
+        if(res.ok) {
+            alert('Замовлення прийнято!');
+            basket = [];
+            document.getElementById('c-count').innerText = '0';
+            toggleCart();
+            this.reset();
+        }
+    } catch(err) {
+        alert('Помилка. Спробуйте ще раз.');
+    } finally {
+        submitBtn.innerText = "ЗАМОВИТИ";
+        submitBtn.disabled = false;
+    }
+};
+
+// Відкриття модалок з характеристиками
+document.querySelectorAll('.specs-btn, [data-modal]').forEach(btn => {
+    btn.onclick = () => {
+        const modalId = btn.getAttribute('data-modal') || 'sm-v121';
+        const m = document.getElementById(modalId);
+        if(m) m.style.display = 'block';
+    };
+});
+</script>
+</body>
+</html>
